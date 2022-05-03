@@ -32,8 +32,8 @@ func BenchmarkUnsafePointAndInterfaceB(b *testing.B) {
 	b.StopTimer()
 }
 
-// test map key use int、string and interface type compare
-func BenchmarkIntStringInterfaceA(b *testing.B) {
+// test map key use int、int64、string and interface type compare
+func BenchmarkIntInt64StringInterfaceA(b *testing.B) {
 	sliceList := make([]int, 0, 100000)
 	for i := 0; i < cap(sliceList); i++ {
 		sliceList = append(sliceList, i)
@@ -49,7 +49,23 @@ func BenchmarkIntStringInterfaceA(b *testing.B) {
 	b.StopTimer()
 }
 
-func BenchmarkIntStringInterfaceB(b *testing.B) {
+func BenchmarkIntInt64StringInterfaceB(b *testing.B) {
+	sliceList := make([]int64, 0, 100000)
+	for i := 0; i < cap(sliceList); i++ {
+		sliceList = append(sliceList, int64(i))
+	}
+
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		mapData := make(map[int64]int)
+		for i := 0; i < len(sliceList); i++ {
+			mapData[sliceList[i]] = i
+		}
+	}
+	b.StopTimer()
+}
+
+func BenchmarkIntInt64StringInterfaceC(b *testing.B) {
 	sliceList := make([]string, 0, 100000)
 	for i := 0; i < cap(sliceList); i++ {
 		sliceList = append(sliceList, strconv.Itoa(i))
@@ -65,7 +81,7 @@ func BenchmarkIntStringInterfaceB(b *testing.B) {
 	b.StopTimer()
 }
 
-func BenchmarkIntStringInterfaceC(b *testing.B) {
+func BenchmarkIntInt64StringInterfaceD(b *testing.B) {
 	sliceList := make([]interface{}, 0, 100000)
 	for i := 0; i < cap(sliceList); i++ {
 		sliceList = append(sliceList, i)
@@ -408,23 +424,149 @@ func TestListAndSliceRandomIndexRemoveB(t *testing.T) {
 	}
 }
 
-func TestListAndSliceRandomValueInsertB(t *testing.T) {
+// big size, slice and list compare
+type IntBig struct {
+	Num1 int64
+	Num2 int64
+	Num3 int64
+	Num4 int64
+	Num5 int64
+}
+
+func BenchmarkListAndSliceBigRandomIndexInsertA(b *testing.B) {
+	num := 100000
+	sliceList := make([]IntBig, 0)
+	for i := 0; i < num; i++ {
+		sliceList = append(sliceList, IntBig{
+			Num1: int64(i),
+			Num2: int64(i),
+			Num3: int64(i),
+			Num4: int64(i),
+			Num5: int64(i),
+		})
+	}
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		l := len(sliceList)
+		rand.Seed(time.Now().UnixNano())
+		randNum := int64(rand.Intn(l)) // random index
+		newSlice := make([]IntBig, l+1)
+		copy(newSlice, sliceList[:randNum])
+		newSlice[randNum] = IntBig{
+			Num1: randNum,
+			Num2: randNum,
+			Num3: randNum,
+			Num4: randNum,
+			Num5: randNum,
+		}
+		copy(newSlice[randNum+1:], sliceList[randNum:])
+		sliceList = newSlice
+	}
+
+	b.StopTimer()
+}
+
+func TestListAndSliceBigRandomIndexInsertA(t *testing.T) {
+	num := 10
+	sliceList := make([]IntBig, 0)
+	for i := 0; i < num; i++ {
+		sliceList = append(sliceList, IntBig{
+			Num1: int64(i),
+			Num2: int64(i),
+			Num3: int64(i),
+			Num4: int64(i),
+			Num5: int64(i),
+		})
+	}
+
+	for i := 0; i < num/2; i++ {
+		l := len(sliceList)
+		rand.Seed(time.Now().UnixNano())
+		randNum := int64(rand.Intn(l)) // random index
+		t.Logf("randNum --> %v", randNum)
+		newSlice := make([]IntBig, l+1)
+		copy(newSlice, sliceList[:randNum])
+		newSlice[randNum] = IntBig{
+			Num1: randNum,
+			Num2: randNum,
+			Num3: randNum,
+			Num4: randNum,
+			Num5: randNum,
+		}
+		copy(newSlice[randNum+1:], sliceList[randNum:])
+		sliceList = newSlice
+	}
+	t.Logf("%v", sliceList)
+}
+
+func BenchmarkListAndSliceBigRandomIndexInsertB(b *testing.B) {
+	num := 100000
+	containerList := list.New()
+	for i := 0; i < num; i++ {
+		containerList.PushBack(IntBig{
+			Num1: int64(i),
+			Num2: int64(i),
+			Num3: int64(i),
+			Num4: int64(i),
+			Num5: int64(i),
+		})
+	}
+
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		l := containerList.Len()
+		rand.Seed(time.Now().UnixNano())
+		randNum := int64(rand.Intn(l)) // random index
+
+		index := int64(0)
+		for e := containerList.Front(); e != nil; e = e.Next() {
+			if index == randNum {
+				ef := containerList.PushBack(IntBig{
+					Num1: randNum,
+					Num2: randNum,
+					Num3: randNum,
+					Num4: randNum,
+					Num5: randNum,
+				})
+				containerList.MoveBefore(ef, e)
+				break
+			} else {
+				index += 1
+			}
+		}
+	}
+	b.StopTimer()
+}
+
+func TestListAndSliceBigRandomIndexInsertB(t *testing.T) {
 	num := 10
 	containerList := list.New()
 	for i := 0; i < num; i++ {
-		containerList.PushBack(i)
+		containerList.PushBack(IntBig{
+			Num1: int64(i),
+			Num2: int64(i),
+			Num3: int64(i),
+			Num4: int64(i),
+			Num5: int64(i),
+		})
 	}
 
 	for j := 0; j < 2; j++ {
 		l := containerList.Len()
 		rand.Seed(time.Now().UnixNano())
-		randNum := rand.Intn(l) // random index
+		randNum := int64(rand.Intn(l)) // random index
 		t.Logf("randNum --> %v", randNum)
 
-		index := 0
+		index := int64(0)
 		for e := containerList.Front(); e != nil; e = e.Next() {
 			if index == randNum {
-				ef := containerList.PushBack(randNum)
+				ef := containerList.PushBack(IntBig{
+					Num1: randNum,
+					Num2: randNum,
+					Num3: randNum,
+					Num4: randNum,
+					Num5: randNum,
+				})
 				containerList.MoveBefore(ef, e)
 				break
 			} else {
@@ -434,16 +576,8 @@ func TestListAndSliceRandomValueInsertB(t *testing.T) {
 	}
 
 	for e := containerList.Front(); e != nil; e = e.Next() {
-		t.Logf("%v", e.Value.(int))
+		t.Logf("%v", e.Value)
 	}
-}
-
-type IntBig struct {
-	Num1 int64
-	Num2 int64
-	Num3 int64
-	Num4 int64
-	Num5 int64
 }
 
 func BenchmarkListAndSliceBigInsertA(b *testing.B) {
@@ -501,3 +635,5 @@ func TestSliceList(t *testing.T) {
 
 	t.Logf("len --> %v", containerList.Len())
 }
+
+// slice
