@@ -9,12 +9,18 @@ type ConcurrentMap struct {
 	partitions  []*ConcurrentSliceMap // 对每个桶中的数据添加map
 	lenOfBucket int                   // 分桶，目的加快map查找
 	free        []int                 // 用户记录删除切片的位置
-	innerSlice  []unsafe.Pointer      // 用户记录所用的值的位置
+	innerSlice  []*innerSlice         // 用户记录所用的值的位置
+	mu          sync.RWMutex
 }
 
 type ConcurrentSliceMap struct {
 	index map[uint64]int
 	mu    sync.RWMutex
+}
+
+type innerSlice struct {
+	key   interface{}
+	Value unsafe.Pointer
 }
 
 type Partitionable interface {
@@ -33,19 +39,28 @@ func CreateConcurrentSliceMap(lenOfBucket int) *ConcurrentMap {
 		partitions:  partitions,
 		lenOfBucket: lenOfBucket,
 		free:        make([]int, 0, 1024),
-		innerSlice:  make([]unsafe.Pointer, 0, 1024),
+		innerSlice:  make([]*innerSlice, 0, 1024),
 	}
 }
 
-/*
-func (m *ConcurrentSliceMap) Len() int {
-	return 0
+func (m *ConcurrentMap) Len() int {
+	length := 0
+	for _, v := range m.partitions {
+		length += len(v.index)
+	}
+	return length
 }
 
-func (m *ConcurrentSliceMap) Range(f func(key, value interface{}) bool) {
+func (m *ConcurrentMap) Range(f func(key, value interface{}) bool) {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
-}*/
+	for _, data := range m.innerSlice {
+		if !f(data.key, data.Value) {
+			break
+		}
+
+	}
+	m.mu.RUnlock()
+}
 
 func (m *ConcurrentMap) getPartition(key Partitionable) *ConcurrentSliceMap {
 	partitionID := key.PartitionKey() % uint64(m.lenOfBucket)
@@ -59,7 +74,8 @@ func (m *ConcurrentMap) Get(key Partitionable) (interface{}, bool) {
 
 	keyIndex := key.PartitionKey()
 	if index, ok := im.index[keyIndex]; ok {
-		return *(*interface{})(m.innerSlice[index]), true
+		data := m.innerSlice[index]
+		return *(*interface{})(data.Value), true
 	}
 
 	return nil, false
@@ -73,7 +89,10 @@ func (m *ConcurrentMap) Set(key Partitionable, v interface{}) {
 	keyIndex := key.PartitionKey()
 
 	if index, ok := im.index[keyIndex]; ok {
-		m.innerSlice[index] = unsafe.Pointer(&v)
+		m.innerSlice[index] = &innerSlice{
+			key.Value(),
+			unsafe.Pointer(&v),
+		}
 		return
 	}
 
@@ -83,7 +102,10 @@ func (m *ConcurrentMap) Set(key Partitionable, v interface{}) {
 		m.free = m.free[1:]
 	}
 
-	m.innerSlice = append(m.innerSlice, unsafe.Pointer(&v))
+	m.innerSlice = append(m.innerSlice, &innerSlice{
+		key.Value(),
+		unsafe.Pointer(&v),
+	})
 	im.index[keyIndex] = n
 }
 

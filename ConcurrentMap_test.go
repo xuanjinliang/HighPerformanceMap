@@ -43,3 +43,25 @@ func TestCreateConcurrentSliceMapInt64(t *testing.T) {
 		t.Error("del failed")
 	}
 }
+
+func TestCreateConcurrentSliceMapStringLen(t *testing.T) {
+	mapData := CreateConcurrentSliceMap(99)
+
+	mapData.Set(StrKey("Hello"), 123)
+	mapData.Set(StrKey("Hello World"), 123)
+
+	t.Logf("%v", mapData.Len())
+}
+
+func TestCreateConcurrentSliceMapStringRange(t *testing.T) {
+	mapData := CreateConcurrentSliceMap(99)
+
+	mapData.Set(StrKey("Hello"), 123)
+	mapData.Set(StrKey("Hello World"), 123)
+
+	mapData.Range(func(key, value interface{}) bool {
+		t.Logf("key --> %v", key.(uint64))
+		t.Logf("key --> %v", value.(int))
+		return true
+	})
+}
