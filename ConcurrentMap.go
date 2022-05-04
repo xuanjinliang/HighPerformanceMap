@@ -5,15 +5,15 @@ import (
 	"unsafe"
 )
 
-type ConcurrentMap struct {
-	partitions  []*ConcurrentSliceMap // 对每个桶中的数据添加map
+type concurrentMap struct {
+	partitions  []*concurrentSliceMap // 对每个桶中的数据添加map
 	lenOfBucket int                   // 分桶，目的加快map查找
 	free        []int                 // 用户记录删除切片的位置
 	innerSlice  []*innerSlice         // 用户记录所用的值的位置
 	mu          sync.RWMutex
 }
 
-type ConcurrentSliceMap struct {
+type concurrentSliceMap struct {
 	index map[uint64]int
 	mu    sync.RWMutex
 }
@@ -28,14 +28,14 @@ type Partitionable interface {
 	PartitionKey() uint64
 }
 
-func CreateConcurrentSliceMap(lenOfBucket int) *ConcurrentMap {
-	partitions := make([]*ConcurrentSliceMap, lenOfBucket)
+func CreateConcurrentSliceMap(lenOfBucket int) *concurrentMap {
+	partitions := make([]*concurrentSliceMap, lenOfBucket)
 	for i := 0; i < lenOfBucket; i++ {
-		partitions[i] = &ConcurrentSliceMap{
+		partitions[i] = &concurrentSliceMap{
 			index: make(map[uint64]int),
 		}
 	}
-	return &ConcurrentMap{
+	return &concurrentMap{
 		partitions:  partitions,
 		lenOfBucket: lenOfBucket,
 		free:        make([]int, 0, 1024),
@@ -43,18 +43,23 @@ func CreateConcurrentSliceMap(lenOfBucket int) *ConcurrentMap {
 	}
 }
 
-func (m *ConcurrentMap) Len() int {
-	length := 0
-	for _, v := range m.partitions {
-		length += len(v.index)
-	}
-	return length
+func (m *concurrentMap) getPartition(key Partitionable) *concurrentSliceMap {
+	partitionID := key.PartitionKey() % uint64(m.lenOfBucket)
+	return m.partitions[partitionID]
 }
 
-func (m *ConcurrentMap) Range(f func(key, value interface{}) bool) {
+func (m *concurrentMap) getValue(v unsafe.Pointer) interface{} {
+	return *(*interface{})(v)
+}
+
+func (m *concurrentMap) Len() int {
+	return len(m.innerSlice)
+}
+
+func (m *concurrentMap) Range(f func(key, value interface{}) bool) {
 	m.mu.RLock()
 	for _, data := range m.innerSlice {
-		if !f(data.key, *(*interface{})(data.Value)) {
+		if !f(data.key, m.getValue(data.Value)) {
 			break
 		}
 
@@ -62,12 +67,7 @@ func (m *ConcurrentMap) Range(f func(key, value interface{}) bool) {
 	m.mu.RUnlock()
 }
 
-func (m *ConcurrentMap) getPartition(key Partitionable) *ConcurrentSliceMap {
-	partitionID := key.PartitionKey() % uint64(m.lenOfBucket)
-	return m.partitions[partitionID]
-}
-
-func (m *ConcurrentMap) Get(key Partitionable) (interface{}, bool) {
+func (m *concurrentMap) Get(key Partitionable) (interface{}, bool) {
 	im := m.getPartition(key)
 	im.mu.RLock()
 	defer im.mu.RUnlock()
@@ -75,13 +75,13 @@ func (m *ConcurrentMap) Get(key Partitionable) (interface{}, bool) {
 	keyIndex := key.PartitionKey()
 	if index, ok := im.index[keyIndex]; ok {
 		data := m.innerSlice[index]
-		return *(*interface{})(data.Value), true
+		return m.getValue(data.Value), true
 	}
 
 	return nil, false
 }
 
-func (m *ConcurrentMap) Set(key Partitionable, v interface{}) {
+func (m *concurrentMap) Set(key Partitionable, v interface{}) {
 	im := m.getPartition(key)
 	im.mu.Lock()
 	defer im.mu.Unlock()
@@ -109,7 +109,7 @@ func (m *ConcurrentMap) Set(key Partitionable, v interface{}) {
 	im.index[keyIndex] = n
 }
 
-func (m *ConcurrentMap) Delete(key Partitionable) {
+func (m *concurrentMap) Delete(key Partitionable) {
 	im := m.getPartition(key)
 	im.mu.Lock()
 	defer im.mu.Unlock()

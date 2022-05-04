@@ -1,18 +1,18 @@
 package HighPerformanceMap
 
-type Int64Key struct {
+type int64Key struct {
 	value uint64
 }
 
-func (i *Int64Key) PartitionKey() uint64 {
+func (i *int64Key) PartitionKey() uint64 {
 	return i.value
 }
 
 // Value is the raw string
-func (i *Int64Key) Value() interface{} {
+func (i *int64Key) Value() interface{} {
 	return i.value
 }
 
-func I64Key(key int64) *Int64Key {
-	return &Int64Key{uint64(key)}
+func I64Key(key int64) *int64Key {
+	return &int64Key{uint64(key)}
 }
