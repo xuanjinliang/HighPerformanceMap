@@ -19,7 +19,7 @@ func (s *stringKey) PartitionKey() uint64 {
 	return s.key
 }
 
-func (s *stringKey) Value() interface{} {
+func (s *stringKey) Value() any {
 	return s.value
 }
 

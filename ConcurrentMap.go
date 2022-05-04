@@ -14,12 +14,12 @@ type concurrentMap struct {
 }
 
 type innerSlice struct {
-	key   interface{}
+	key   any
 	Value unsafe.Pointer
 }
 
 type Partitionable interface {
-	Value() interface{}
+	Value() any
 	PartitionKey() uint64
 }
 
@@ -41,8 +41,8 @@ func (m *concurrentMap) getPartition(key Partitionable) map[uint64]int {
 	return m.partitions[partitionID]
 }
 
-func (m *concurrentMap) getValue(v unsafe.Pointer) interface{} {
-	return *(*interface{})(v)
+func (m *concurrentMap) getValue(v unsafe.Pointer) any {
+	return *(*any)(v)
 }
 
 func (m *concurrentMap) Len() int {
@@ -57,7 +57,7 @@ func (m *concurrentMap) Len() int {
 	return length
 }
 
-func (m *concurrentMap) Range(f func(key, value interface{}) bool) {
+func (m *concurrentMap) Range(f func(key, value any) bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -75,7 +75,7 @@ func (m *concurrentMap) FreeLen() int {
 	return len(m.free)
 }
 
-func (m *concurrentMap) Get(key Partitionable) (interface{}, bool) {
+func (m *concurrentMap) Get(key Partitionable) (any, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	im := m.getPartition(key)
@@ -89,7 +89,7 @@ func (m *concurrentMap) Get(key Partitionable) (interface{}, bool) {
 	return nil, false
 }
 
-func (m *concurrentMap) Set(key Partitionable, v interface{}) {
+func (m *concurrentMap) Set(key Partitionable, v any) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	im := m.getPartition(key)

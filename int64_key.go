@@ -9,7 +9,7 @@ func (i *int64Key) PartitionKey() uint64 {
 }
 
 // Value is the raw string
-func (i *int64Key) Value() interface{} {
+func (i *int64Key) Value() any {
 	return i.value
 }
 
