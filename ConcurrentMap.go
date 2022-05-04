@@ -65,7 +65,7 @@ func (m *concurrentMap) Range(f func(key, value interface{}) bool) {
 		for _, index := range mapData {
 			data := m.innerSlice[index]
 			if !f(data.key, m.getValue(data.Value)) {
-				break
+				return
 			}
 		}
 	}
