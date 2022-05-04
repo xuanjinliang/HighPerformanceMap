@@ -54,7 +54,7 @@ func (m *ConcurrentMap) Len() int {
 func (m *ConcurrentMap) Range(f func(key, value interface{}) bool) {
 	m.mu.RLock()
 	for _, data := range m.innerSlice {
-		if !f(data.key, data.Value) {
+		if !f(data.key, *(*interface{})(data.Value)) {
 			break
 		}
 
