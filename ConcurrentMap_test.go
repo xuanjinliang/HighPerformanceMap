@@ -1,9 +1,13 @@
 package HighPerformanceMap
 
 import (
+	"fmt"
+	"math/rand"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 )
 
 // A functional test
@@ -172,4 +176,160 @@ func TestGoroutineDelete(t *testing.T) {
 	wg.Wait()
 	t.Logf("len --> %v", mapData.Len())
 	t.Logf("free len --> %v", mapData.FreeLen())
+}
+
+// performance Test write
+func BenchmarkSyncAndMapAndPMapSetA(b *testing.B) {
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		num := 1000000
+		mapData := make(map[string]int)
+		mu := sync.Mutex{}
+		for i := 0; i < num; i++ {
+			mu.Lock()
+			mapData[strconv.Itoa(i)] = i
+			mu.Unlock()
+		}
+	}
+	b.StopTimer()
+}
+
+func BenchmarkSyncAndMapAndPMapSetB(b *testing.B) {
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		num := 1000000
+		mapData := sync.Map{}
+		for i := 0; i < num; i++ {
+			mapData.Store(strconv.Itoa(i), i)
+		}
+	}
+	b.StopTimer()
+}
+
+func BenchmarkSyncAndMapAndPMapSetC(b *testing.B) {
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		num := 1000000
+		mapData := CreateConcurrentSliceMap(99)
+		for i := 0; i < num; i++ {
+			mapData.Set(StrKey(strconv.Itoa(i)), i)
+		}
+	}
+	b.StopTimer()
+}
+
+// performance Test Read
+func BenchmarkSyncAndMapAndPMapReadA(b *testing.B) {
+	num := 1000000
+	mapData := make(map[string]int)
+	for i := 0; i < num; i++ {
+		mapData[strconv.Itoa(i)] = i
+	}
+
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		mu := sync.RWMutex{}
+		rand.Seed(time.Now().UnixNano())
+		randNum := rand.Intn(num)
+		mu.RLock()
+		d := mapData[strconv.Itoa(randNum)]
+		mu.RUnlock()
+		fmt.Sprintf("%v", d)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkSyncAndMapAndPMapReadB(b *testing.B) {
+	num := 1000000
+	mapData := sync.Map{}
+	for i := 0; i < num; i++ {
+		mapData.Store(strconv.Itoa(i), i)
+	}
+
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		rand.Seed(time.Now().UnixNano())
+		randNum := rand.Intn(num)
+		if d, ok := mapData.Load(strconv.Itoa(randNum)); ok {
+			fmt.Sprintf("%v", d)
+		} else {
+			b.Errorf("error %v", randNum)
+		}
+	}
+	b.StopTimer()
+}
+
+func BenchmarkSyncAndMapAndPMapReadC(b *testing.B) {
+	num := 1000000
+	mapData := CreateConcurrentSliceMap(99)
+	for i := 0; i < num; i++ {
+		mapData.Set(StrKey(strconv.Itoa(i)), i)
+	}
+
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		rand.Seed(time.Now().UnixNano())
+		randNum := rand.Intn(num)
+		if d, ok := mapData.Get(StrKey(strconv.Itoa(randNum))); ok {
+			fmt.Sprintf("%v", d)
+		} else {
+			b.Errorf("error %v", randNum)
+		}
+	}
+	b.StopTimer()
+}
+
+// performance Test GC recycle
+func BenchmarkSyncAndMapAndPMapGCA(b *testing.B) {
+	num := 1000000
+	mapData := make(map[string]int)
+	for i := 0; i < num; i++ {
+		mapData[strconv.Itoa(i)] = i
+	}
+
+	randNum := 100
+
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		mu := sync.RWMutex{}
+		mu.Lock()
+		delete(mapData, strconv.Itoa(j+randNum))
+		mu.Unlock()
+		runtime.GC()
+	}
+	b.StopTimer()
+}
+
+func BenchmarkSyncAndMapAndPMapGCB(b *testing.B) {
+	num := 1000000
+	mapData := sync.Map{}
+	for i := 0; i < num; i++ {
+		mapData.Store(strconv.Itoa(i), i)
+	}
+
+	randNum := 100
+
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		mapData.Delete(strconv.Itoa(j + randNum))
+		runtime.GC()
+	}
+	b.StopTimer()
+}
+
+func BenchmarkSyncAndMapAndPMapGCC(b *testing.B) {
+	num := 1000000
+	mapData := CreateConcurrentSliceMap(99)
+	for i := 0; i < num; i++ {
+		mapData.Set(StrKey(strconv.Itoa(i)), i)
+	}
+
+	randNum := 100
+
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		mapData.Delete(StrKey(strconv.Itoa(randNum)))
+		runtime.GC()
+	}
+	b.StopTimer()
 }
