@@ -1,7 +1,12 @@
 package HighPerformanceMap
 
-import "testing"
+import (
+	"strconv"
+	"sync"
+	"testing"
+)
 
+// A functional test
 func TestCreateConcurrentSliceMapString(t *testing.T) {
 	mapData := CreateConcurrentSliceMap(99)
 	v, ok := mapData.Get(StrKey("Hello"))
@@ -45,10 +50,18 @@ func TestCreateConcurrentSliceMapInt64(t *testing.T) {
 }
 
 func TestCreateConcurrentSliceMapStringLen(t *testing.T) {
+	num := 1000
+
+	sliceList := make([]string, num)
+	for i := 0; i < num; i++ {
+		sliceList[i] = strconv.Itoa(i)
+	}
+
 	mapData := CreateConcurrentSliceMap(99)
 
-	mapData.Set(StrKey("Hello"), 123)
-	mapData.Set(StrKey("Hello World"), 123)
+	for _, data := range sliceList {
+		mapData.Set(StrKey(data), data)
+	}
 
 	t.Logf("%v", mapData.Len())
 }
@@ -64,4 +77,42 @@ func TestCreateConcurrentSliceMapStringRange(t *testing.T) {
 		t.Logf("value --> %v", value.(int))
 		return true
 	})
+}
+
+// goroutine Test
+func TestGoroutineSet(t *testing.T) {
+	num := 1000
+
+	sliceList := make([]string, num)
+	for i := 0; i < num; i++ {
+		sliceList[i] = strconv.Itoa(i)
+	}
+
+	mapData := CreateConcurrentSliceMap(99)
+	goroutineNum := 10
+	ch := make(chan string, goroutineNum)
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < goroutineNum; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				if data, ok := <-ch; ok {
+					mapData.Set(StrKey(data), data)
+				} else {
+					break
+				}
+			}
+		}()
+	}
+
+	for _, v := range sliceList {
+		ch <- v
+	}
+
+	close(ch)
+	wg.Wait()
+
+	t.Logf("%v", mapData.Len())
 }
