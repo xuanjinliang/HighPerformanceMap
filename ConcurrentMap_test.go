@@ -81,7 +81,7 @@ func TestCreateConcurrentSliceMapStringRange(t *testing.T) {
 
 // goroutine Test
 func TestGoroutineSet(t *testing.T) {
-	num := 1000
+	num := 10000
 
 	sliceList := make([]string, num)
 	for i := 0; i < num; i++ {
@@ -89,7 +89,7 @@ func TestGoroutineSet(t *testing.T) {
 	}
 
 	mapData := CreateConcurrentSliceMap(99)
-	goroutineNum := 10
+	goroutineNum := 100
 	ch := make(chan string, goroutineNum)
 	wg := sync.WaitGroup{}
 
