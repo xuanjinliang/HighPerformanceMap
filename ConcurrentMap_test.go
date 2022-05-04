@@ -116,3 +116,57 @@ func TestGoroutineSet(t *testing.T) {
 
 	t.Logf("%v", mapData.Len())
 }
+
+func TestGoroutineRead(t *testing.T) {
+	num := 10000
+
+	mapData := CreateConcurrentSliceMap(99)
+	for i := 0; i < num; i++ {
+		mapData.Set(StrKey(strconv.Itoa(i)), i)
+	}
+
+	goroutineNum := 100
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < goroutineNum; i++ {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			if data, ok := mapData.Get(StrKey(key)); ok {
+				t.Logf("key --> %v, value --> %v \n", key, data)
+			} else {
+				t.Errorf("get key %v Error", key)
+			}
+
+		}(strconv.Itoa(i))
+	}
+
+	wg.Wait()
+}
+
+func TestGoroutineDelete(t *testing.T) {
+	num := 10000
+
+	mapData := CreateConcurrentSliceMap(99)
+	for i := 0; i < num; i++ {
+		mapData.Set(StrKey(strconv.Itoa(i)), i)
+	}
+
+	goroutineNum := 100
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < goroutineNum; i++ {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			mapData.Delete(StrKey(key))
+			if data, ok := mapData.Get(StrKey(key)); ok {
+				t.Errorf("key --> %v, value --> %v \n", key, data)
+			}
+		}(strconv.Itoa(i))
+	}
+
+	wg.Wait()
+	t.Logf("len --> %v", mapData.Len())
+	t.Logf("free len --> %v", mapData.FreeLen())
+}

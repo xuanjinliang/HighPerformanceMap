@@ -46,18 +46,33 @@ func (m *concurrentMap) getValue(v unsafe.Pointer) interface{} {
 }
 
 func (m *concurrentMap) Len() int {
-	return len(m.innerSlice)
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	length := 0
+	for _, data := range m.partitions {
+		length += len(data)
+	}
+
+	return length
 }
 
 func (m *concurrentMap) Range(f func(key, value interface{}) bool) {
 	m.mu.RLock()
-	for _, data := range m.innerSlice {
-		if !f(data.key, m.getValue(data.Value)) {
-			break
-		}
+	defer m.mu.RUnlock()
 
+	for _, mapData := range m.partitions {
+		for _, index := range mapData {
+			data := m.innerSlice[index]
+			if !f(data.key, m.getValue(data.Value)) {
+				break
+			}
+		}
 	}
-	m.mu.RUnlock()
+}
+
+func (m *concurrentMap) FreeLen() int {
+	return len(m.free)
 }
 
 func (m *concurrentMap) Get(key Partitionable) (interface{}, bool) {
