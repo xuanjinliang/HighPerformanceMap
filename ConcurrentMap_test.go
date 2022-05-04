@@ -71,10 +71,13 @@ func TestCreateConcurrentSliceMapStringRange(t *testing.T) {
 
 	mapData.Set(StrKey("Hello"), 123)
 	mapData.Set(StrKey("Hello World"), 123)
+	mapData.Set(StrKey("Hello World1"), 123)
 
 	mapData.Range(func(key, value interface{}) bool {
-		t.Logf("key --> %v", key.(string))
-		t.Logf("value --> %v", value.(int))
+		t.Logf("key --> %v, value --> %v \n", key.(string), value.(int))
+		if key.(string) == "Hello" {
+			return false
+		}
 		return true
 	})
 }
