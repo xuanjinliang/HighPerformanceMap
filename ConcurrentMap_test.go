@@ -382,7 +382,7 @@ func TestSyncAndMapAndPMapGCA(t *testing.T) {
 	var stats debug.GCStats
 	debug.ReadGCStats(&stats)
 	t.Logf("numGC --> %v, PauseTotal --> %v", stats.NumGC, stats.PauseTotal)
-	t.Logf("len --> %v", len(mapData))
+	runtime.KeepAlive(mapData)
 }
 
 func TestSyncAndMapAndPMapGCB(t *testing.T) {
@@ -404,8 +404,7 @@ func TestSyncAndMapAndPMapGCB(t *testing.T) {
 	debug.ReadGCStats(&stats)
 	t.Logf("numGC --> %v, PauseTotal --> %v", stats.NumGC, stats.PauseTotal)
 
-	_, ok := mapData.Load(strconv.Itoa(num - 1))
-	t.Logf("ok --> %v", ok)
+	runtime.KeepAlive(mapData)
 }
 
 func TestSyncAndMapAndPMapGCC(t *testing.T) {
@@ -426,7 +425,7 @@ func TestSyncAndMapAndPMapGCC(t *testing.T) {
 	var stats debug.GCStats
 	debug.ReadGCStats(&stats)
 	t.Logf("numGC --> %v, PauseTotal --> %v", stats.NumGC, stats.PauseTotal)
-	t.Logf("len --> %v", mapData.Len())
+	runtime.KeepAlive(mapData)
 }
 
 // big Data
@@ -600,7 +599,7 @@ func TestSyncAndMapAndPMapBigGCA(t *testing.T) {
 	var stats debug.GCStats
 	debug.ReadGCStats(&stats)
 	t.Logf("numGC --> %v, PauseTotal --> %v", stats.NumGC, stats.PauseTotal)
-	t.Logf("len --> %v", len(mapData))
+	runtime.KeepAlive(mapData)
 }
 
 func TestSyncAndMapAndPMapBigGCB(t *testing.T) {
@@ -608,7 +607,7 @@ func TestSyncAndMapAndPMapBigGCB(t *testing.T) {
 	mapData := sync.Map{}
 	for i := 0; i < num; i++ {
 		iBig := int64(i)
-		d := &intBig{
+		d := intBig{
 			iBig, iBig, iBig, iBig, iBig,
 		}
 		mapData.Store(strconv.Itoa(i+100), d)
@@ -626,8 +625,7 @@ func TestSyncAndMapAndPMapBigGCB(t *testing.T) {
 	debug.ReadGCStats(&stats)
 	t.Logf("numGC --> %v, PauseTotal --> %v", stats.NumGC, stats.PauseTotal)
 
-	_, ok := mapData.Load(strconv.Itoa(num - 1))
-	t.Logf("ok --> %v", ok)
+	runtime.KeepAlive(mapData)
 }
 
 func TestSyncAndMapAndPMapBigGCC(t *testing.T) {
@@ -635,7 +633,7 @@ func TestSyncAndMapAndPMapBigGCC(t *testing.T) {
 	mapData := CreateConcurrentSliceMap(99)
 	for i := 0; i < num; i++ {
 		iBig := int64(i)
-		d := &intBig{
+		d := intBig{
 			iBig, iBig, iBig, iBig, iBig,
 		}
 		mapData.Set(StrKey(strconv.Itoa(i)), d)
@@ -652,5 +650,5 @@ func TestSyncAndMapAndPMapBigGCC(t *testing.T) {
 	var stats debug.GCStats
 	debug.ReadGCStats(&stats)
 	t.Logf("numGC --> %v, PauseTotal --> %v", stats.NumGC, stats.PauseTotal)
-	t.Logf("len --> %v", mapData.Len())
+	runtime.KeepAlive(mapData)
 }
