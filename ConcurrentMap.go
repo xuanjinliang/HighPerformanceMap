@@ -72,15 +72,18 @@ func (m *concurrentMap) Range(f func(key, value any) bool) {
 }
 
 func (m *concurrentMap) FreeLen() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return len(m.free)
 }
 
 func (m *concurrentMap) Get(key Partitionable) (any, bool) {
 	im := m.getPartition(key)
+	keyIndex := key.PartitionKey()
+
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	keyIndex := key.PartitionKey()
 	if index, ok := im[keyIndex]; ok {
 		data := m.innerSlice[index]
 		return m.getValue(data.Value), true
@@ -91,12 +94,15 @@ func (m *concurrentMap) Get(key Partitionable) (any, bool) {
 
 func (m *concurrentMap) Set(key Partitionable, v any) {
 	im := m.getPartition(key)
+	keyIndex := key.PartitionKey()
+
+	m.mu.RLock()
+	index, ok := im[keyIndex]
+	m.mu.RUnlock()
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	keyIndex := key.PartitionKey()
-
-	if index, ok := im[keyIndex]; ok {
+	if ok {
 		m.innerSlice[index] = &innerSlice{
 			key.Value(),
 			unsafe.Pointer(&v),
@@ -119,14 +125,17 @@ func (m *concurrentMap) Set(key Partitionable, v any) {
 
 func (m *concurrentMap) Delete(key Partitionable) {
 	im := m.getPartition(key)
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	keyIndex := key.PartitionKey()
-	if index, ok := im[keyIndex]; ok {
+
+	m.mu.RLock()
+	index, ok := im[keyIndex]
+	m.mu.RUnlock()
+
+	if ok {
+		m.mu.Lock()
 		m.free = append(m.free, index)
 		m.innerSlice[index] = nil
 		delete(im, keyIndex)
+		m.mu.Unlock()
 	}
 }
