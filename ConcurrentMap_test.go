@@ -371,7 +371,7 @@ func TestSyncAndMapAndPMapGCA(t *testing.T) {
 	for i := 0; i < num; i++ {
 		mapData[strconv.Itoa(i)] = i
 	}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		delete(mapData, strconv.Itoa(i+100))
 	}
 
@@ -392,7 +392,7 @@ func TestSyncAndMapAndPMapGCB(t *testing.T) {
 		mapData.Store(strconv.Itoa(i), i)
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		mapData.Delete(strconv.Itoa(i + 100))
 	}
 
@@ -415,7 +415,7 @@ func TestSyncAndMapAndPMapGCC(t *testing.T) {
 		mapData.Set(StrKey(strconv.Itoa(i)), i)
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		mapData.Delete(StrKey(strconv.Itoa(i + 100)))
 	}
 
@@ -580,7 +580,7 @@ func BenchmarkSyncAndMapAndPMapBigReadC(b *testing.B) {
 
 // performance Test GC recycle
 func TestSyncAndMapAndPMapBigGCA(t *testing.T) {
-	num := 1000000
+	num := 100000
 	mapData := make(map[string]*intBig)
 	for i := 0; i < num; i++ {
 		iBig := int64(i)
@@ -590,7 +590,7 @@ func TestSyncAndMapAndPMapBigGCA(t *testing.T) {
 		mapData[strconv.Itoa(i)] = d
 	}
 	for i := 0; i < 10000; i++ {
-		delete(mapData, strconv.Itoa(i))
+		delete(mapData, strconv.Itoa(i+100))
 	}
 
 	now := time.Now()
@@ -604,14 +604,14 @@ func TestSyncAndMapAndPMapBigGCA(t *testing.T) {
 }
 
 func TestSyncAndMapAndPMapBigGCB(t *testing.T) {
-	num := 1000000
+	num := 100000
 	mapData := sync.Map{}
 	for i := 0; i < num; i++ {
 		iBig := int64(i)
 		d := &intBig{
 			iBig, iBig, iBig, iBig, iBig,
 		}
-		mapData.Store(strconv.Itoa(i), d)
+		mapData.Store(strconv.Itoa(i+100), d)
 	}
 
 	for i := 0; i < 10000; i++ {
@@ -631,7 +631,7 @@ func TestSyncAndMapAndPMapBigGCB(t *testing.T) {
 }
 
 func TestSyncAndMapAndPMapBigGCC(t *testing.T) {
-	num := 1000000
+	num := 100000
 	mapData := CreateConcurrentSliceMap(99)
 	for i := 0; i < num; i++ {
 		iBig := int64(i)
@@ -642,7 +642,7 @@ func TestSyncAndMapAndPMapBigGCC(t *testing.T) {
 	}
 
 	for i := 0; i < 10000; i++ {
-		mapData.Delete(StrKey(strconv.Itoa(i)))
+		mapData.Delete(StrKey(strconv.Itoa(i + 100)))
 	}
 
 	now := time.Now()
