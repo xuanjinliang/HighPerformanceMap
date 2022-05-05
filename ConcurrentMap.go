@@ -76,9 +76,9 @@ func (m *concurrentMap) FreeLen() int {
 }
 
 func (m *concurrentMap) Get(key Partitionable) (any, bool) {
+	im := m.getPartition(key)
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	im := m.getPartition(key)
 
 	keyIndex := key.PartitionKey()
 	if index, ok := im[keyIndex]; ok {
@@ -90,10 +90,10 @@ func (m *concurrentMap) Get(key Partitionable) (any, bool) {
 }
 
 func (m *concurrentMap) Set(key Partitionable, v any) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	im := m.getPartition(key)
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	keyIndex := key.PartitionKey()
 
 	if index, ok := im[keyIndex]; ok {
@@ -118,10 +118,10 @@ func (m *concurrentMap) Set(key Partitionable, v any) {
 }
 
 func (m *concurrentMap) Delete(key Partitionable) {
+	im := m.getPartition(key)
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
-	im := m.getPartition(key)
 
 	keyIndex := key.PartitionKey()
 	if index, ok := im[keyIndex]; ok {
