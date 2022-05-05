@@ -635,5 +635,3 @@ func TestSliceList(t *testing.T) {
 
 	t.Logf("len --> %v", containerList.Len())
 }
-
-// slice
