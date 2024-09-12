@@ -1,7 +1,9 @@
 package HighPerformanceMap
 
 import (
+	"bytes"
 	"container/list"
+	"encoding/json"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -634,4 +636,33 @@ func TestSliceList(t *testing.T) {
 	}
 
 	t.Logf("len --> %v", containerList.Len())
+}
+
+func BenchmarkJsonUnmarshal(b *testing.B) {
+	b.ResetTimer()
+	rawData := `{"name": "John", "age": 30}`
+
+	var person struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+	for j := 0; j < b.N; j++ {
+		_ = json.Unmarshal([]byte(rawData), &person)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkJsonNewDecoder(b *testing.B) {
+	b.ResetTimer()
+	decoder := json.NewDecoder(bytes.NewBuffer([]byte(`{"name": "John", "age": 30}`)))
+
+	var person struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+
+	for j := 0; j < b.N; j++ {
+		_ = decoder.Decode(&person)
+	}
+	b.StopTimer()
 }
