@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"container/list"
 	"encoding/json"
+	jsoniter "github.com/json-iterator/go"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -640,29 +641,39 @@ func TestSliceList(t *testing.T) {
 
 func BenchmarkJsonUnmarshal(b *testing.B) {
 	b.ResetTimer()
-	rawData := `{"name": "John", "age": 30}`
-
 	var person struct {
 		Name string `json:"name"`
 		Age  int    `json:"age"`
 	}
 	for j := 0; j < b.N; j++ {
-		_ = json.Unmarshal([]byte(rawData), &person)
+		_ = json.Unmarshal([]byte(`{"name": "John", "age": 30}`), &person)
 	}
 	b.StopTimer()
 }
 
 func BenchmarkJsonNewDecoder(b *testing.B) {
 	b.ResetTimer()
-	decoder := json.NewDecoder(bytes.NewBuffer([]byte(`{"name": "John", "age": 30}`)))
-
 	var person struct {
 		Name string `json:"name"`
 		Age  int    `json:"age"`
 	}
 
 	for j := 0; j < b.N; j++ {
-		_ = decoder.Decode(&person)
+		_ = json.NewDecoder(bytes.NewBuffer([]byte(`{"name": "John", "age": 30}`))).Decode(&person)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkJsoniter(b *testing.B) {
+	b.ResetTimer()
+	jsoni := jsoniter.ConfigCompatibleWithStandardLibrary
+	var person struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+
+	for j := 0; j < b.N; j++ {
+		_ = jsoni.Unmarshal([]byte(`{"name": "John", "age": 30}`), &person)
 	}
 	b.StopTimer()
 }
